@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+
+{% block title %}Single Prediction - California Housing{% endblock %}
+
+{% block content %}
+<section class="prediction-section">
+    <div class="container">
+        <div class="page-header">
+            <h1 class="page-title">Single House Prediction</h1>
+            <p class="page-subtitle">Enter property details to predict the house value</p>
+        </div>
+
+        <div class="prediction-container">
+            <!-- Input Form -->
+            <div class="form-card">
+                <form id="predictionForm">
+                    <div class="form-grid">
+                        <!-- Location Details -->
+                        <div class="form-section">
+                            <h3 class="form-section-title">📍 Location</h3>
+
+                            <div class="form-group">
+                                <label for="longitude">Longitude</label>
+                                <input type="number" id="longitude" name="longitude" step="0.01" value="-122.23"
+                                    required>
+                                <span class="form-hint">Example: -122.23</span>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="latitude">Latitude</label>
+                                <input type="number" id="latitude" name="latitude" step="0.01" value="37.88" required>
+                                <span class="form-hint">Example: 37.88</span>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="ocean_proximity">Ocean Proximity</label>
+                                <select id="ocean_proximity" name="ocean_proximity" required>
+                                    <option value="NEAR BAY">NEAR BAY</option>
+                                    <option value="NEAR OCEAN">NEAR OCEAN</option>
+                                    <option value="<1H OCEAN">&lt;1H OCEAN</option>
+                                    <option value="INLAND">INLAND</option>
+                                    <option value="ISLAND">ISLAND</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Property Details -->
+                        <div class="form-section">
+                            <h3 class="form-section-title">🏠 Property Details</h3>
+
+                            <div class="form-group">
+                                <label for="housing_median_age">House Median Age</label>
+                                <input type="number" id="housing_median_age" name="housing_median_age" step="1"
+                                    value="41" required>
+                                <span class="form-hint">Years</span>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="total_rooms">Total Rooms</label>
+                                <input type="number" id="total_rooms" name="total_rooms" step="1" value="880" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="total_bedrooms">Total Bedrooms</label>
+                                <input type="number" id="total_bedrooms" name="total_bedrooms" step="1" value="129"
+                                    required>
+                            </div>
+                        </div>
+
+                        <!-- Demographics -->
+                        <div class="form-section">
+                            <h3 class="form-section-title">👥 Demographics</h3>
+
+                            <div class="form-group">
+                                <label for="population">Population</label>
+                                <input type="number" id="population" name="population" step="1" value="322" required>
+                                <span class="form-hint">Block population</span>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="households">Households</label>
+                                <input type="number" id="households" name="households" step="1" value="126" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="median_income">Median Income</label>
+                                <input type="number" id="median_income" name="median_income" step="0.0001"
+                                    value="8.3252" required>
+                                <span class="form-hint">In tens of thousands</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="resetForm()">
+                            Reset
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <span>Predict Price</span>
+                            <span class="btn-icon">→</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Results Card -->
+            <div class="result-card" id="resultCard" style="display: none;">
+                <div class="result-header">
+                    <h3>Prediction Result</h3>
+                    <button class="close-btn" onclick="closeResult()">✕</button>
+                </div>
+
+                <div class="result-content">
+                    <div class="prediction-value" id="predictionValue">
+                        $0.00
+                    </div>
+                    <p class="result-label">Predicted House Value</p>
+
+                    <div class="result-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Location</span>
+                            <span class="detail-value" id="resultLocation">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Median Income</span>
+                            <span class="detail-value" id="resultIncome">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Ocean Proximity</span>
+                            <span class="detail-value" id="resultProximity">-</span>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-secondary" onclick="predictAnother()">
+                        Predict Another
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+    const form = document.getElementById('predictionForm');
+    const resultCard = document.getElementById('resultCard');
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        showLoading('Making prediction...');
+
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData.entries());
+
+        try {
+            const response = await fetch('/api/predict', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+
+            hideLoading();
+
+            if (result.status === 'success') {
+                displayResult(result, data);
+                showToast('Prediction successful!', 'success');
+            } else {
+                showToast(result.message, 'error');
+            }
+        } catch (error) {
+            hideLoading();
+            showToast('Prediction failed: ' + error.message, 'error');
+        }
+    });
+
+    function displayResult(result, inputData) {
+        document.getElementById('predictionValue').textContent = result.formatted_prediction;
+        document.getElementById('resultLocation').textContent =
+            `${inputData.latitude}, ${inputData.longitude}`;
+        document.getElementById('resultIncome').textContent =
+            `$${(parseFloat(inputData.median_income) * 10000).toLocaleString()}`;
+        document.getElementById('resultProximity').textContent = inputData.ocean_proximity;
+
+        resultCard.style.display = 'block';
+        resultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function closeResult() {
+        resultCard.style.display = 'none';
+    }
+
+    function predictAnother() {
+        resultCard.style.display = 'none';
+        form.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function resetForm() {
+        form.reset();
+        resultCard.style.display = 'none';
+    }
+</script>
+{% endblock %}

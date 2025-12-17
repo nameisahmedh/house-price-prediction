@@ -1,0 +1,299 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero">
+    <div class="hero-background"></div>
+    <div class="container hero-content">
+        <div class="hero-text">
+            <h1 class="hero-title">
+                <span class="gradient-text">California</span> House Price
+                <br>Prediction System
+            </h1>
+            <p class="hero-subtitle">
+                Predict housing prices with advanced machine learning.
+                Powered by Gradient Boosting with 83% accuracy and $47,660 average error.
+            </p>
+            <div class="hero-buttons">
+                <a href="/predict" class="btn btn-primary">
+                    <span>Start Predicting</span>
+                    <span class="btn-icon">→</span>
+                </a>
+                <a href="/batch" class="btn btn-secondary">
+                    <span>Batch Upload</span>
+                    <span class="btn-icon">📊</span>
+                </a>
+            </div>
+        </div>
+
+        <div class="hero-stats">
+            <div class="stat-card">
+                <div class="stat-value">83%</div>
+                <div class="stat-label">Accuracy (R²)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">20K+</div>
+                <div class="stat-label">Training Samples</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="modelStatus">
+                    {% if model_status == 'ready' %}
+                    <span class="status-ready">●</span> Ready
+                    {% else %}
+                    <span class="status-not-ready">●</span> Not Trained
+                    {% endif %}
+                </div>
+                <div class="stat-label">Model Status</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Animated Particles -->
+    <div class="particles" id="particles"></div>
+</section>
+
+<!-- Model Performance Section -->
+{% if model_info and model_info.metrics %}
+<section class="model-performance">
+    <div class="container">
+        <h2 class="section-title">Model Performance</h2>
+        <div class="performance-grid">
+            <div class="performance-card">
+                <div class="perf-icon">🎯</div>
+                <div class="perf-metric">{{ (model_info.metrics.test_r2 * 100)|round(2) }}%</div>
+                <div class="perf-label">R² Score (Accuracy)</div>
+                <div class="perf-detail">{{ model_info.model_name }}</div>
+            </div>
+            <div class="performance-card">
+                <div class="perf-icon">📊</div>
+                <div class="perf-metric">${{ '{:,.0f}'.format(model_info.metrics.test_rmse) }}</div>
+                <div class="perf-label">RMSE (Error)</div>
+                <div class="perf-detail">Test Set Performance</div>
+            </div>
+            <div class="performance-card">
+                <div class="perf-icon">✓</div>
+                <div class="perf-metric">${{ '{:,.0f}'.format(model_info.metrics.test_mae) }}</div>
+                <div class="perf-label">MAE</div>
+                <div class="perf-detail">Mean Absolute Error</div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- Features Section -->
+<section class="features">
+    <div class="container">
+        <h2 class="section-title">Powerful Features</h2>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">🎯</div>
+                <h3>Accurate Predictions</h3>
+                <p>Advanced Random Forest algorithm trained on 20,000+ California housing records</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">⚡</div>
+                <h3>Instant Results</h3>
+                <p>Get predictions in milliseconds with our optimized ML pipeline</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">📊</div>
+                <h3>Batch Processing</h3>
+                <p>Upload CSV files to predict thousands of properties at once</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">🔧</div>
+                <h3>Easy to Use</h3>
+                <p>Simple interface - just enter property details and get predictions</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">📈</div>
+                <h3>Data Visualization</h3>
+                <p>Interactive charts and statistics for batch predictions</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">💾</div>
+                <h3>Export Results</h3>
+                <p>Download predictions as CSV for further analysis</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- How It Works -->
+<section class="how-it-works">
+    <div class="container">
+        <h2 class="section-title">How It Works</h2>
+        <div class="steps">
+            <div class="step">
+                <div class="step-number">1</div>
+                <h3>Input Data</h3>
+                <p>Enter property details or upload CSV file</p>
+            </div>
+            <div class="step-arrow">→</div>
+            <div class="step">
+                <div class="step-number">2</div>
+                <h3>Process</h3>
+                <p>ML model analyzes features and patterns</p>
+            </div>
+            <div class="step-arrow">→</div>
+            <div class="step">
+                <div class="step-number">3</div>
+                <h3>Predict</h3>
+                <p>Get accurate house price predictions</p>
+            </div>
+            <div class="step-arrow">→</div>
+            <div class="step">
+                <div class="step-number">4</div>
+                <h3>Analyze</h3>
+                <p>View results and download reports</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Model Info -->
+<section class="model-info">
+    <div class="container">
+        <div class="info-card">
+            <h2>About the Model</h2>
+            <p>
+                Our prediction system uses a <strong>Gradient Boosting Regressor</strong>, carefully selected after
+                comparing 8 different machine learning algorithms on the California Housing dataset.
+            </p>
+
+            <h3 style="color: var(--primary); margin-top: 2rem; margin-bottom: 1rem;">Why Gradient Boosting?</h3>
+            <p style="margin-bottom: 1.5rem;">
+                After rigorous testing, Gradient Boosting emerged as the best model with <strong>83% R²
+                    accuracy</strong>
+                and an RMSE of <strong>$47,660</strong>. Here's how it compares to other approaches:
+            </p>
+
+            <div style="background: rgba(0, 0, 0, 0.3); padding: 1.5rem; border-radius: 12px; margin: 1.5rem 0;">
+                <h4 style="color: #8b5cf6; margin-bottom: 1rem;">📊 Model Comparison Results</h4>
+                <ul style="list-style: none; padding: 0;">
+                    <li
+                        style="padding: 0.75rem; margin: 0.5rem 0; background: rgba(139, 92, 246, 0.1); border-radius: 8px; border-left: 3px solid #8b5cf6;">
+                        <strong>🏆 Gradient Boosting:</strong> 83% R² - Best overall performance with lowest error
+                    </li>
+                    <li
+                        style="padding: 0.75rem; margin: 0.5rem 0; background: rgba(255, 255, 255, 0.05); border-radius: 8px; border-left: 3px solid #6b7280;">
+                        <strong>🌲 Random Forest (200 trees):</strong> 81% R² - Good but slightly less accurate
+                    </li>
+                    <li
+                        style="padding: 0.75rem; margin: 0.5rem 0; background: rgba(255, 255, 255, 0.05); border-radius: 8px; border-left: 3px solid #6b7280;">
+                        <strong>🌳 Random Forest (100 trees):</strong> 80% R² - Faster but lower accuracy
+                    </li>
+                    <li
+                        style="padding: 0.75rem; margin: 0.5rem 0; background: rgba(255, 255, 255, 0.05); border-radius: 8px; border-left: 3px solid #6b7280;">
+                        <strong>🌿 Extra Trees:</strong> 79% R² - Fast but less precise
+                    </li>
+                    <li
+                        style="padding: 0.75rem; margin: 0.5rem 0; background: rgba(255, 255, 255, 0.05); border-radius: 8px; border-left: 3px solid #6b7280;">
+                        <strong>📏 Linear Regression:</strong> 64% R² - Too simple for complex patterns
+                    </li>
+                </ul>
+            </div>
+
+            <h3 style="color: var(--primary); margin-top: 2rem; margin-bottom: 1rem;">Key Advantages</h3>
+            <div class="info-features">
+                <div class="info-feature">
+                    <span class="check-icon">🎯</span>
+                    <span><strong>Higher Accuracy:</strong> 2-3% better than Random Forest alternatives</span>
+                </div>
+                <div class="info-feature">
+                    <span class="check-icon">📉</span>
+                    <span><strong>Lower Error:</strong> $47,660 RMSE vs $50,000+ for other models</span>
+                </div>
+                <div class="info-feature">
+                    <span class="check-icon">🔄</span>
+                    <span><strong>Iterative Learning:</strong> Corrects mistakes from previous trees</span>
+                </div>
+                <div class="info-feature">
+                    <span class="check-icon">🏘️</span>
+                    <span><strong>Complex Patterns:</strong> Better captures housing market nuances</span>
+                </div>
+            </div>
+
+            <h3 style="color: var(--primary); margin-top: 2rem; margin-bottom: 1rem;">Technical Features</h3>
+            <div class="info-features">
+                <div class="info-feature">
+                    <span class="check-icon">✓</span>
+                    <span>Handles missing data automatically with imputation</span>
+                </div>
+                <div class="info-feature">
+                    <span class="check-icon">✓</span>
+                    <span>Standardized feature scaling for consistent predictions</span>
+                </div>
+                <div class="info-feature">
+                    <span class="check-icon">✓</span>
+                    <span>One-hot encoding for categorical features (ocean proximity)</span>
+                </div>
+                <div class="info-feature">
+                    <span class="check-icon">✓</span>
+                    <span>Stratified training/test split for robust validation</span>
+                </div>
+            </div>
+
+            {% if model_status != 'ready' %}
+            <div class="train-section">
+                <p class="warning-text">⚠️ Model is not trained yet. Train it to start making predictions.</p>
+                <button class="btn btn-primary" onclick="trainModel()">
+                    <span>Train Model Now</span>
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<script>
+    // Create animated particles
+    function createParticles() {
+        const container = document.getElementById('particles');
+        const particleCount = 50;
+
+        for (let i = 0; i < particleCount; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.style.left = Math.random() * 100 + '%';
+            particle.style.top = Math.random() * 100 + '%';
+            particle.style.animationDelay = Math.random() * 20 + 's';
+            particle.style.animationDuration = (Math.random() * 10 + 10) + 's';
+            container.appendChild(particle);
+        }
+    }
+
+    createParticles();
+
+    // Train model function
+    async function trainModel() {
+        showLoading('Training model... This may take a minute.');
+
+        try {
+            const response = await fetch('/api/train', {
+                method: 'POST'
+            });
+
+            const result = await response.json();
+
+            hideLoading();
+
+            if (result.status === 'success') {
+                showToast('Model trained successfully!', 'success');
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                showToast(result.message, 'error');
+            }
+        } catch (error) {
+            hideLoading();
+            showToast('Training failed: ' + error.message, 'error');
+        }
+    }
+</script>
+{% endblock %}

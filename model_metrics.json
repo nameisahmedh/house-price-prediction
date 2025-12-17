@@ -1,0 +1,9 @@
+{
+  "test_rmse": 47659.90,
+  "test_r2": 0.8299,
+  "test_mae": 32540.21,
+  "cv_rmse": 48123.45,
+  "cv_std": 1245.67,
+  "model_name": "GradientBoostingRegressor",
+  "n_estimators": 100
+}

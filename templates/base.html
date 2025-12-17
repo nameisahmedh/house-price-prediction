@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}California House Price Prediction{% endblock %}</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+    <link rel="shortcut icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container nav-container">
+            <a href="/" class="nav-brand" style="cursor: pointer; text-decoration: none;">
+                <span class="icon">🏠</span>
+                <span class="brand-text">California Housing</span>
+            </a>
+            <ul class="nav-menu" id="navMenu">
+                <li><a href="/" class="nav-link">Home</a></li>
+                <li><a href="/predict" class="nav-link">Single Prediction</a></li>
+                <li><a href="/batch" class="nav-link">Batch Prediction</a></li>
+            </ul>
+            <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 Ahmed - California House Price Prediction. Built with Flask &amp; Machine Learning.</p>
+        </div>
+    </footer>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+        <p class="loading-text">Processing...</p>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+
+</html>

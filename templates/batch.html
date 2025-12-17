@@ -1,0 +1,508 @@
+{% extends "base.html" %}
+
+{% block title %}Batch Prediction - California Housing{% endblock %}
+
+{% block content %}
+<section class="batch-section">
+    <div class="container">
+        <div class="page-header">
+            <h1 class="page-title">Batch Prediction</h1>
+            <p class="page-subtitle">Upload a CSV file to predict multiple properties at once</p>
+        </div>
+
+        <!-- Upload Section -->
+        <div class="upload-card">
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">📁</div>
+                <h3>Drop your CSV file here</h3>
+                <p>or click to browse</p>
+                <input type="file" id="fileInput" accept=".csv" hidden>
+                <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">
+                    Choose File
+                </button>
+            </div>
+
+            <div class="file-info" id="fileInfo" style="display: none;">
+                <div class="file-details">
+                    <span class="file-icon">📄</span>
+                    <div>
+                        <div class="file-name" id="fileName"></div>
+                        <div class="file-size" id="fileSize"></div>
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="uploadFile()">
+                    Upload & Predict
+                </button>
+            </div>
+
+            <div class="upload-requirements">
+                <h4>CSV Requirements:</h4>
+                <ul>
+                    <li>Must include columns: longitude, latitude, housing_median_age, total_rooms, total_bedrooms,
+                        population, households, median_income, ocean_proximity</li>
+                    <li>Maximum file size: 16 MB</li>
+                    <li>Ocean proximity values: NEAR BAY, NEAR OCEAN, &lt;1H OCEAN, INLAND, ISLAND</li>
+                </ul>
+                <a href="/download-sample" class="btn btn-secondary" style="margin-top: 1rem;">
+                    📥 Download Sample CSV
+                </a>
+            </div>
+        </div>
+
+        <!-- Error Section -->
+        <div class="error-section" id="errorSection" style="display: none;">
+            <div class="error-card">
+                <div class="error-icon">⚠️</div>
+                <h2>Upload Error</h2>
+                <div class="error-message" id="errorMessage"></div>
+                <div class="error-actions">
+                    <button class="btn btn-primary" onclick="uploadAnother()">
+                        📁 Upload Another File
+                    </button>
+                    <a href="/download-sample" class="btn btn-secondary">
+                        📥 Download Sample CSV
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="results-section" id="resultsSection" style="display: none;">
+            <div class="results-header">
+                <h2>Prediction Results</h2>
+                <div style="display: flex; gap: 1rem;">
+                    <button class="btn btn-secondary" onclick="uploadAnother()">
+                        📁 Upload Another File
+                    </button>
+                    <button class="btn btn-primary" onclick="downloadResults()">
+                        💾 Download CSV
+                    </button>
+                </div>
+            </div>
+
+            <!-- Statistics Cards -->
+            <div class="stats-grid" id="statsGrid">
+                <div class="stat-card-mini">
+                    <div class="stat-mini-label">Total Predictions</div>
+                    <div class="stat-mini-value" id="statTotal">0</div>
+                </div>
+                <div class="stat-card-mini">
+                    <div class="stat-mini-label">Average Price</div>
+                    <div class="stat-mini-value" id="statMean">$0</div>
+                </div>
+                <div class="stat-card-mini">
+                    <div class="stat-mini-label">Median Price</div>
+                    <div class="stat-mini-value" id="statMedian">$0</div>
+                </div>
+                <div class="stat-card-mini">
+                    <div class="stat-mini-label">Min Price</div>
+                    <div class="stat-mini-value" id="statMin">$0</div>
+                </div>
+                <div class="stat-card-mini">
+                    <div class="stat-mini-label">Max Price</div>
+                    <div class="stat-mini-value" id="statMax">$0</div>
+                </div>
+            </div>
+
+            <!-- Charts Grid -->
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <h3>Price Distribution</h3>
+                    <canvas id="distributionChart"></canvas>
+                </div>
+
+                <div class="chart-card">
+                    <h3>Ocean Proximity Distribution</h3>
+                    <canvas id="oceanChart"></canvas>
+                </div>
+
+                <div class="chart-card" style="grid-column: 1 / -1;">
+                    <h3>Median Income vs Predicted Price</h3>
+                    <canvas id="scatterChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Results Table -->
+            <div class="table-card">
+                <h3>Preview (First 20 rows)</h3>
+                <div class="table-container">
+                    <table class="results-table" id="resultsTable">
+                        <thead id="tableHead"></thead>
+                        <tbody id="tableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    let currentSessionId = null;
+    let chartInstance = null;
+
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    const fileInfo = document.getElementById('fileInfo');
+    const resultsSection = document.getElementById('resultsSection');
+
+    // Drag and drop handlers - NO CLICK EVENT ON UPLOAD AREA
+    // Only the "Choose File" button triggers file selection
+
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.classList.add('drag-over');
+    });
+
+    uploadArea.addEventListener('dragleave', () => {
+        uploadArea.classList.remove('drag-over');
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('drag-over');
+
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleFileSelect(files[0]);
+        }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            handleFileSelect(e.target.files[0]);
+        }
+    });
+
+    function handleFileSelect(file) {
+        if (!file.name.endsWith('.csv')) {
+            showToast('Please select a CSV file', 'error');
+            return;
+        }
+
+        document.getElementById('fileName').textContent = file.name;
+        document.getElementById('fileSize').textContent = formatFileSize(file.size);
+
+        uploadArea.style.display = 'none';
+        fileInfo.style.display = 'flex';
+    }
+
+    async function uploadFile() {
+        const file = fileInput.files[0];
+        if (!file) return;
+
+        showLoading('Processing predictions...');
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const response = await fetch('/api/batch-predict', {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+
+            hideLoading();
+
+            if (result.status === 'success') {
+                currentSessionId = result.session_id;
+                displayResults(result);
+                showToast(`${result.count} predictions completed!`, 'success');
+            } else {
+                // Show error section with details
+                displayError(result.message);
+                showToast(result.message, 'error');
+            }
+        } catch (error) {
+            hideLoading();
+            displayError('Upload failed: ' + error.message);
+            showToast('Upload failed: ' + error.message, 'error');
+        }
+    }
+
+    function displayResults(result) {
+        // Update statistics
+        document.getElementById('statTotal').textContent = result.count;
+        document.getElementById('statMean').textContent = '$' + Math.round(result.statistics.mean).toLocaleString();
+        document.getElementById('statMedian').textContent = '$' + Math.round(result.statistics.median).toLocaleString();
+        document.getElementById('statMin').textContent = '$' + Math.round(result.statistics.min).toLocaleString();
+        document.getElementById('statMax').textContent = '$' + Math.round(result.statistics.max).toLocaleString();
+
+        // Display table preview
+        displayTable(result.preview);
+
+        // Create all charts
+        createChart(result.preview);
+        createOceanProximityChart(result.preview);
+        createScatterChart(result.preview);
+
+        // Show results section
+        resultsSection.style.display = 'block';
+        resultsSection.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function displayTable(data) {
+        if (data.length === 0) return;
+
+        const columns = Object.keys(data[0]);
+        const thead = document.getElementById('tableHead');
+        const tbody = document.getElementById('tableBody');
+
+        // Create header
+        thead.innerHTML = '<tr>' + columns.map(col =>
+            `<th>${col.replace(/_/g, ' ').toUpperCase()}</th>`
+        ).join('') + '</tr>';
+
+        // Create rows
+        tbody.innerHTML = data.map(row =>
+            '<tr>' + columns.map(col => {
+                const value = row[col];
+                if (col === 'predicted_house_value') {
+                    return `<td class="highlight">$${Math.round(value).toLocaleString()}</td>`;
+                }
+                return `<td>${value}</td>`;
+            }).join('') + '</tr>'
+        ).join('');
+    }
+
+    function createChart(data) {
+        const ctx = document.getElementById('distributionChart');
+
+        if (chartInstance) {
+            chartInstance.destroy();
+        }
+
+        const predictions = data.map(d => d.predicted_house_value);
+        const bins = 20;
+        const min = Math.min(...predictions);
+        const max = Math.max(...predictions);
+        const binSize = (max - min) / bins;
+
+        const histogram = new Array(bins).fill(0);
+        predictions.forEach(value => {
+            const index = Math.min(Math.floor((value - min) / binSize), bins - 1);
+            histogram[index]++;
+        });
+
+        const labels = Array.from({ length: bins }, (_, i) =>
+            '$' + Math.round(min + i * binSize).toLocaleString()
+        );
+
+        chartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Number of Properties',
+                    data: histogram,
+                    backgroundColor: 'rgba(139, 92, 246, 0.6)',
+                    borderColor: 'rgba(139, 92, 246, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function createOceanProximityChart(data) {
+        const ctx = document.getElementById('oceanChart');
+
+        // Count ocean proximity types
+        const oceanCounts = {};
+        data.forEach(d => {
+            const ocean = d.ocean_proximity || 'Unknown';
+            oceanCounts[ocean] = (oceanCounts[ocean] || 0) + 1;
+        });
+
+        const labels = Object.keys(oceanCounts);
+        const values = Object.values(oceanCounts);
+        const colors = [
+            'rgba(139, 92, 246, 0.8)',
+            'rgba(59, 130, 246, 0.8)',
+            'rgba(16, 185, 129, 0.8)',
+            'rgba(245, 158, 11, 0.8)',
+            'rgba(239, 68, 68, 0.8)'
+        ];
+
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: colors,
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: '#e5e7eb',
+                            padding: 15,
+                            font: {
+                                size: 12
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function createScatterChart(data) {
+        const ctx = document.getElementById('scatterChart');
+
+        const scatterData = data.map(d => ({
+            x: d.median_income,
+            y: d.predicted_house_value
+        }));
+
+        new Chart(ctx, {
+            type: 'scatter',
+            data: {
+                datasets: [{
+                    label: 'Properties',
+                    data: scatterData,
+                    backgroundColor: 'rgba(139, 92, 246, 0.6)',
+                    borderColor: 'rgba(139, 92, 246, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Median Income (×10K)',
+                            color: '#e5e7eb'
+                        },
+                        ticks: {
+                            color: '#9ca3af'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Predicted Price ($)',
+                            color: '#e5e7eb'
+                        },
+                        ticks: {
+                            color: '#9ca3af',
+                            callback: function (value) {
+                                return '$' + Math.round(value / 1000) + 'K';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function displayError(message) {
+        const errorSection = document.getElementById('errorSection');
+        const errorMessage = document.getElementById('errorMessage');
+
+        // Format the error message
+        let formattedMessage = message;
+
+        // If it's a missing columns error, format it nicely
+        if (message.includes('Missing required columns')) {
+            const parts = message.split(':');
+            if (parts.length > 1) {
+                const columns = parts[1].trim().split(',').map(col => col.trim());
+                formattedMessage = `
+                    <p><strong>${parts[0]}:</strong></p>
+                    <ul class="error-list">
+                        ${columns.map(col => `<li>${col}</li>`).join('')}
+                    </ul>
+                    <p class="error-hint">Please ensure your CSV file contains all required columns:</p>
+                    <ul class="required-columns">
+                        <li>longitude</li>
+                        <li>latitude</li>
+                        <li>housing_median_age</li>
+                        <li>total_rooms</li>
+                        <li>total_bedrooms</li>
+                        <li>population</li>
+                        <li>households</li>
+                        <li>median_income</li>
+                        <li>ocean_proximity</li>
+                    </ul>
+                `;
+            }
+        } else {
+            formattedMessage = `<p>${message}</p>`;
+        }
+
+        errorMessage.innerHTML = formattedMessage;
+        errorSection.style.display = 'block';
+        resultsSection.style.display = 'none';
+
+        // Scroll to error section
+        errorSection.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function uploadAnother() {
+        // Reset the form
+        fileInput.value = '';
+        uploadArea.style.display = 'block';
+        fileInfo.style.display = 'none';
+        resultsSection.style.display = 'none';
+        document.getElementById('errorSection').style.display = 'none';
+
+        // Scroll to upload area
+        uploadArea.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function downloadResults() {
+        if (!currentSessionId) {
+            showToast('No results to download', 'error');
+            return;
+        }
+
+        // Trigger download
+        const link = document.createElement('a');
+        link.href = `/download/${currentSessionId}`;
+        link.download = `predictions_${currentSessionId}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        showToast('Download started!', 'success');
+    }
+
+    function formatFileSize(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+</script>
+{% endblock %}
