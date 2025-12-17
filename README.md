@@ -24,9 +24,10 @@ A modern web application for predicting California housing prices using machine 
 
 ### Installation
 
-1. **Clone or navigate to the project directory**
+1. **Clone the repository**
    ```bash
-   cd "c:\Users\Ahmed\OneDrive\Documents\PROJECTS_AHMED\California House Prediction"
+   git clone https://github.com/nameisahmedh/house-price-prediction.git
+   cd house-price-prediction
    ```
 
 2. **Install dependencies**
