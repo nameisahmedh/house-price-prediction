@@ -301,9 +301,14 @@ if __name__ == '__main__':
         print("✓ Model loaded successfully!")
         print("="*60 + "\n")
     
+    # Use environment PORT for production (Render) or 5001 for local
+    port = int(os.environ.get('PORT', 5001))
+    
     print("🚀 Starting Flask server...")
     print("📊 California House Price Prediction Web App")
-    print(f"🌐 Open your browser to: http://127.0.0.1:5001/")
+    print(f"🌐 Server running on port: {port}")
     print("\nPress Ctrl+C to stop the server\n")
     
-    app.run(debug=True, host='0.0.0.0', port=5001)
+    # Debug mode off in production
+    debug_mode = os.environ.get('FLASK_ENV') != 'production'
+    app.run(debug=debug_mode, host='0.0.0.0', port=port)
